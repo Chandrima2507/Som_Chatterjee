@@ -4,8 +4,12 @@ import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const DATA_DIR = path.resolve(__dirname, '../data');
+const IS_VERCEL = Boolean(process.env.VERCEL);
+const SEED_FILE = path.resolve(__dirname, '../data/db.json');
+const DATA_DIR = IS_VERCEL ? '/tmp/data' : path.resolve(__dirname, '../data');
 const DB_FILE = path.join(DATA_DIR, 'db.json');
+
+let memoryDB = null;
 
 const DEFAULT_DB = {
     tours: [
@@ -165,31 +169,58 @@ const DEFAULT_DB = {
     }
 };
 
-// Ensure data folder exists
-if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
+// Ensure data folder exists (graceful for read-only environments)
+try {
+    if (!fs.existsSync(DATA_DIR)) {
+        fs.mkdirSync(DATA_DIR, { recursive: true });
+    }
+} catch (e) {
+    // Read-only filesystem on Vercel lambda
 }
 
 export function readDB() {
     try {
+        if (memoryDB) {
+            return {
+                ...DEFAULT_DB,
+                ...memoryDB
+            };
+        }
+
+        // On Vercel, seed database from repository data if available
+        if (IS_VERCEL && !fs.existsSync(DB_FILE) && fs.existsSync(SEED_FILE)) {
+            try {
+                const seedRaw = fs.readFileSync(SEED_FILE, 'utf-8');
+                const seedData = JSON.parse(seedRaw);
+                memoryDB = seedData;
+                writeDB(seedData);
+                return { ...DEFAULT_DB, ...seedData };
+            } catch (seedErr) {
+                console.warn('Vercel seed load note:', seedErr.message);
+            }
+        }
+
         if (!fs.existsSync(DB_FILE)) {
             writeDB(DEFAULT_DB);
             return DEFAULT_DB;
         }
+
         const raw = fs.readFileSync(DB_FILE, 'utf-8');
         const data = JSON.parse(raw);
+        memoryDB = data;
         return {
             ...DEFAULT_DB,
             ...data
         };
     } catch (err) {
         console.error('Error reading database file:', err);
-        return DEFAULT_DB;
+        return memoryDB ? { ...DEFAULT_DB, ...memoryDB } : DEFAULT_DB;
     }
 }
 
 export function writeDB(data) {
     try {
+        memoryDB = data;
         if (!fs.existsSync(DATA_DIR)) {
             fs.mkdirSync(DATA_DIR, { recursive: true });
         }
@@ -197,8 +228,15 @@ export function writeDB(data) {
         fs.writeFileSync(DB_FILE, json, 'utf-8');
         return true;
     } catch (err) {
-        console.error('Error writing to database file:', err);
-        return false;
+        // Fallback write to /tmp on serverless environments
+        try {
+            if (!fs.existsSync('/tmp/data')) fs.mkdirSync('/tmp/data', { recursive: true });
+            fs.writeFileSync('/tmp/data/db.json', JSON.stringify(data, null, 2), 'utf-8');
+            return true;
+        } catch (tmpErr) {
+            // In-memory memoryDB was already updated above
+            return true;
+        }
     }
 }
 

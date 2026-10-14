@@ -151,24 +151,34 @@ apiRouter.post('/gallery/upload', (req, res) => {
 
         const cleanName = `som-stage-${Date.now()}.${ext}`;
         const uploadDir = path.resolve(__dirname, '../public/uploads');
-        if (!fs.existsSync(uploadDir)) {
-            fs.mkdirSync(uploadDir, { recursive: true });
-        }
-        const filePath = path.join(uploadDir, cleanName);
-        fs.writeFileSync(filePath, buffer);
+        try {
+            if (!fs.existsSync(uploadDir)) {
+                fs.mkdirSync(uploadDir, { recursive: true });
+            }
+            const filePath = path.join(uploadDir, cleanName);
+            fs.writeFileSync(filePath, buffer);
 
-        // Also sync to dist/uploads if dist exists
-        const distUploadDir = path.resolve(__dirname, '../dist/uploads');
-        if (fs.existsSync(distUploadDir)) {
-            fs.writeFileSync(path.join(distUploadDir, cleanName), buffer);
-        }
+            // Also sync to dist/uploads if dist exists
+            const distUploadDir = path.resolve(__dirname, '../dist/uploads');
+            if (fs.existsSync(distUploadDir)) {
+                fs.writeFileSync(path.join(distUploadDir, cleanName), buffer);
+            }
 
-        // Return relative path so browsers can load it immediately
-        res.json({
-            success: true,
-            url: `uploads/${cleanName}`,
-            filename: cleanName
-        });
+            // Return relative path so browsers can load it immediately
+            res.json({
+                success: true,
+                url: `uploads/${cleanName}`,
+                filename: cleanName
+            });
+        } catch (fsErr) {
+            console.warn('Vercel serverless filesystem read-only, using direct dataUrl:', fsErr.message);
+            res.json({
+                success: true,
+                url: dataUrl,
+                filename: cleanName,
+                isDataUrl: true
+            });
+        }
     } catch (err) {
         console.error('Gallery image upload error:', err);
         res.status(500).json({ success: false, error: err.message });
