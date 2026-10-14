@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Portal | Som Chatterjee Tour & Booking Management</title>
+    <meta name="robots" content="noindex, nofollow">
+
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="admin.css">
+    <script type="module" src="admin.js"></script>
+</head>
+
+<body class="admin-body">
+
+    <!-- Ambient Backstage Lights -->
+    <div class="admin-stage-bg" aria-hidden="true">
+        <div class="adm-spotlight adm-spotlight-1"></div>
+        <div class="adm-spotlight adm-spotlight-2"></div>
+        <div class="adm-spotlight adm-spotlight-3"></div>
+    </div>
+
+    <div class="admin-wrapper">
+
+        <!-- ==================================================================
+             1. AUTHENTICATION VIEW (ADMIN LOGIN ONLY)
+             ================================================================== -->
+        <main class="admin-auth-container" id="adminAuthView">
+            <div class="auth-card">
+                <div class="auth-header">
+                    <div class="auth-seal">🔒</div>
+                    <h1 class="auth-title">Som Chatterjee<span class="red-dot">.</span></h1>
+                    <p class="auth-subtitle">Tour & Artist Management Console</p>
+                    <span class="auth-badge">Restricted Admin Access</span>
+                </div>
+
+                <div id="authErrorMsg" class="auth-error">
+                    ⚠️ Invalid username or password. Please try again.
+                </div>
+
+                <form id="adminLoginForm" class="auth-form" autocomplete="off">
+                    <div class="adm-form-group">
+                        <label for="admUsername" class="adm-label">Admin Username</label>
+                        <div class="adm-input-wrap">
+                            <span class="adm-input-icon">👤</span>
+                            <input type="text" id="admUsername" class="adm-input" placeholder="Enter admin username"
+                                required autofocus>
+                        </div>
+                    </div>
+
+                    <div class="adm-form-group">
+                        <label for="admPassword" class="adm-label">Password</label>
+                        <div class="adm-input-wrap">
+                            <span class="adm-input-icon">🔑</span>
+                            <input type="password" id="admPassword" class="adm-input" placeholder="Enter password"
+                                required>
+                            <button type="button" id="togglePasswordBtn" class="adm-input-toggle"
+                                aria-label="Toggle password visibility">👁️</button>
+                        </div>
+                    </div>
+
+                    <div class="auth-options">
+                        <label class="auth-checkbox">
+                            <input type="checkbox" id="rememberMeCheckbox">
+                            <span>Keep me signed in</span>
+                        </label>
+                    </div>
+
+                    <button type="submit" class="btn-adm btn-adm-primary btn-adm-full">
+                        Sign In to Admin Console →
+                    </button>
+                </form>
+
+                <a href="index.html" class="auth-back-link">
+                    ← Return to Public Website
+                </a>
+            </div>
+        </main>
+
+
+        <!-- ==================================================================
+             2. ADMIN DASHBOARD VIEW (DISPLAYED ONCE AUTHENTICATED)
+             ================================================================== -->
+        <div id="adminDashboardView" style="display: none;">
+
+            <!-- Admin Top Navigation Bar -->
+            <header class="admin-topbar">
+                <div class="admin-topbar-inner">
+                    <div class="admin-brand">
+                        <a href="index.html" class="admin-logo-text">SOM CHATTERJEE<span class="red-dot">.</span></a>
+                        <span class="admin-badge-portal">Management Portal</span>
+                    </div>
+
+                    <div class="admin-topbar-right">
+                        <div class="admin-status-indicator" title="Connected to local sync engine">
+                            <span class="admin-status-dot"></span>
+                            <span>Live Sync Active</span>
+                        </div>
+
+                        <a href="index.html" target="_blank" rel="noopener" class="btn-adm btn-adm-outline btn-adm-sm">
+                            🌐 View Public Site ↗
+                        </a>
+
+                        <button id="adminLogoutBtn" class="btn-adm btn-adm-danger btn-adm-sm">
+                            🚪 Sign Out
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Dashboard Main Container -->
+            <main class="admin-main">
+
+                <!-- Welcome Header -->
+                <div class="dashboard-hero">
+                    <h2 class="dashboard-hero-title">Artist Control Center 🎤</h2>
+                    <p class="dashboard-hero-subtitle">
+                        Manage Som Chatterjee's live tour schedule, monitor and respond to concert booking enquiries,
+                        and export subscriber lists in real time.
+                    </p>
+                </div>
+
+                <!-- Live Metrics Strip -->
+                <div class="admin-stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-info">
+                            <span class="stat-label">Active Tour Shows</span>
+                            <span class="stat-value" id="statToursCount">0</span>
+                            <span class="stat-sub">Live on public site</span>
+                        </div>
+                        <div class="stat-icon stat-icon-tours">📅</div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-info">
+                            <span class="stat-label">Total Enquiries</span>
+                            <span class="stat-value" id="statTotalEnquiries">0</span>
+                            <span class="stat-sub">Concerts & college fests</span>
+                        </div>
+                        <div class="stat-icon stat-icon-enquiries">📩</div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-info">
+                            <span class="stat-label">New / Pending</span>
+                            <span class="stat-value" id="statPendingEnquiries">0</span>
+                            <span class="stat-sub">Requires follow up</span>
+                        </div>
+                        <div class="stat-icon stat-icon-pending">🟡</div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-info">
+                            <span class="stat-label">Subscribers</span>
+                            <span class="stat-value" id="statSubscribersCount">0</span>
+                            <span class="stat-sub">Newsletter community</span>
+                        </div>
+                        <div class="stat-icon stat-icon-subscribers">📬</div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-info">
+                            <span class="stat-label">Gallery Capacity</span>
+                            <span class="stat-value" id="statGalleryCount">5 / 5</span>
+                            <span class="stat-sub" id="statGallerySub">Slots Used (Max 5)</span>
+                        </div>
+                        <div class="stat-icon stat-icon-gallery">🖼️</div>
+                    </div>
+                </div>
+
+                <!-- Navigation Tabs -->
+                <nav class="admin-tabs-nav" role="tablist">
+                    <button class="admin-tab-btn active" data-tab="tours" role="tab" aria-selected="true">
+                        📅 Tour Dates Manager <span class="tab-badge" id="tabBadgeTours">0</span>
+                    </button>
+                    <button class="admin-tab-btn" data-tab="gallery" role="tab" aria-selected="false">
+                        🖼️ Gallery Manager <span class="tab-badge tab-badge-amber" id="tabBadgeGallery">5/5</span>
+                    </button>
+                    <button class="admin-tab-btn" data-tab="enquiries" role="tab" aria-selected="false">
+                        📩 Booking Enquiries <span class="tab-badge tab-badge-cyan" id="tabBadgeEnquiries">0</span>
+                    </button>
+                    <button class="admin-tab-btn" data-tab="subscribers" role="tab" aria-selected="false">
+                        📬 Newsletter Subscribers <span class="tab-badge" id="tabBadgeSubscribers">0</span>
+                    </button>
+                    <button class="admin-tab-btn" data-tab="settings" role="tab" aria-selected="false">
+                        ⚙️ Settings & Security
+                    </button>
+                </nav>
+
+                <!-- TAB 1: TOUR DATES MANAGER -->
+                <section class="admin-tab-pane active" id="paneTours" role="tabpanel">
+                    <div class="pane-action-bar">
+                        <div class="action-bar-left">
+                            <div class="adm-search-wrap">
+                                <span class="adm-search-icon">🔍</span>
+                                <input type="text" id="tourSearchInput" class="adm-search-input"
+                                    placeholder="Search by city, venue or date...">
+                            </div>
+
+                            <select id="tourFilterStatus" class="adm-select">
+                                <option value="all">All Shows Statuses</option>
+                                <option value="Upcoming Show">Upcoming Shows</option>
+                                <option value="Confirmed">Confirmed</option>
+                                <option value="Sold Out">Sold Out</option>
+                                <option value="Postponed">Postponed</option>
+                            </select>
+                        </div>
+
+                        <div class="action-bar-right">
+                            <button id="btnOpenAddTourModal" class="btn-adm btn-adm-primary">
+                                ➕ Add Tour Date
+                            </button>
+                            <button id="btnResetToursDefault" class="btn-adm btn-adm-outline"
+                                title="Restore default tour list">
+                                🔄 Reset to Defaults
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Tour List Container -->
+                    <div id="tourAdminList" class="tour-admin-list">
+                        <!-- Rendered dynamically by admin.js -->
+                    </div>
+                </section>
+
+                <!-- TAB: GALLERY MANAGER (MAX 5 IMAGES CAPACITY) -->
+                <section class="admin-tab-pane" id="paneGallery" role="tabpanel">
+                    <!-- Capacity Status Card -->
+                    <div class="gallery-capacity-card">
+                        <div class="capacity-header">
+                            <div class="capacity-title-wrap">
+                                <span class="capacity-badge" id="galleryCapacityBadge">5 / 5 SLOTS USED (FULL)</span>
+                                <h3 class="capacity-title">Moments On Stage · Gallery Capacity</h3>
+                            </div>
+                            <div class="capacity-counter" id="galleryCapacityText">
+                                <strong id="galleryUsedCount">5</strong> of 5 Slots in Use
+                            </div>
+                        </div>
+                        <div class="capacity-bar-track">
+                            <div class="capacity-bar-fill" id="galleryCapacityFill" style="width: 100%;"></div>
+                        </div>
+                        <p class="capacity-helper">
+                            Strict capacity limit: The public gallery showcases a curated collection of up to <strong>5
+                                live stage photos</strong>. To upload a new photo when all 5 slots are full, delete an
+                            existing image first to free up a slot.
+                        </p>
+                    </div>
+
+                    <!-- Gallery Action Bar -->
+                    <div class="pane-action-bar">
+                        <div class="action-bar-left">
+                            <div class="gallery-slot-summary" id="gallerySlotSummary">
+                                <span>Remaining Slots: <strong id="galleryFreeSlotsCount">0</strong> available</span>
+                            </div>
+                        </div>
+
+                        <div class="action-bar-right">
+                            <button id="btnOpenUploadModal" class="btn-adm btn-adm-primary">
+                                ➕ Upload Image
+                            </button>
+                            <button id="btnResetGalleryDefault" class="btn-adm btn-adm-outline"
+                                title="Restore original 5 concert photos">
+                                🔄 Reset to Default 5 Photos
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Gallery Cards Grid -->
+                    <div id="galleryAdminGrid" class="gallery-admin-grid">
+                        <!-- Rendered dynamically by admin.js -->
+                    </div>
+                </section>
+
+                <!-- TAB 2: BOOKING ENQUIRIES -->
+                <section class="admin-tab-pane" id="paneEnquiries" role="tabpanel">
+                    <div class="pane-action-bar">
+                        <div class="action-bar-left">
+                            <div class="adm-search-wrap">
+                                <span class="adm-search-icon">🔍</span>
+                                <input type="text" id="enquirySearchInput" class="adm-search-input"
+                                    placeholder="Search by client name, email, event or city...">
+                            </div>
+
+                            <div class="filter-pills" id="enquiryFilterPills">
+                                <button class="filter-pill active" data-filter="all">All (<span
+                                        id="cntEnqAll">0</span>)</button>
+                                <button class="filter-pill" data-filter="new">New (<span
+                                        id="cntEnqNew">0</span>)</button>
+                                <button class="filter-pill" data-filter="contacted">Contacted (<span
+                                        id="cntEnqContacted">0</span>)</button>
+                                <button class="filter-pill" data-filter="archived">Archived (<span
+                                        id="cntEnqArchived">0</span>)</button>
+                            </div>
+                        </div>
+
+                        <div class="action-bar-right">
+                            <button id="btnExportEnquiriesCSV" class="btn-adm btn-adm-cyan btn-adm-sm">
+                                📥 Export CSV
+                            </button>
+                            <button id="btnExportEnquiriesJSON" class="btn-adm btn-adm-outline btn-adm-sm">
+                                📑 Export JSON
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Enquiries Feed Container -->
+                    <div id="enquiriesFeed" class="enquiries-feed">
+                        <!-- Rendered dynamically by admin.js -->
+                    </div>
+                </section>
+
+                <!-- TAB 3: NEWSLETTER SUBSCRIBERS -->
+                <section class="admin-tab-pane" id="paneSubscribers" role="tabpanel">
+                    <div class="pane-action-bar">
+                        <div class="action-bar-left">
+                            <div class="adm-search-wrap">
+                                <span class="adm-search-icon">🔍</span>
+                                <input type="text" id="subSearchInput" class="adm-search-input"
+                                    placeholder="Search subscriber email...">
+                            </div>
+                        </div>
+
+                        <div class="action-bar-right">
+                            <button id="btnExportSubscribersCSV" class="btn-adm btn-adm-cyan btn-adm-sm">
+                                📥 Export Subscribers CSV
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="adm-table-container">
+                        <table class="adm-table">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Subscriber Email</th>
+                                    <th>Subscribed On</th>
+                                    <th style="text-align: right;">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="subscribersTableBody">
+                                <!-- Rendered dynamically by admin.js -->
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- TAB 4: SETTINGS & SECURITY -->
+                <section class="admin-tab-pane" id="paneSettings" role="tabpanel">
+                    <div class="settings-grid">
+                        <!-- Change Password Card -->
+                        <div class="settings-card">
+                            <h3 class="settings-card-title">🔐 Change Admin Password</h3>
+                            <p class="settings-card-desc">
+                                Update the password used to access this management console.
+                            </p>
+
+                            <form id="changePasswordForm">
+                                <div class="adm-form-group">
+                                    <label for="currentPassword" class="adm-label">Current Password</label>
+                                    <input type="password" id="currentPassword" class="adm-input" required
+                                        placeholder="Enter current password">
+                                </div>
+
+                                <div class="adm-form-group">
+                                    <label for="newPassword" class="adm-label">New Password</label>
+                                    <input type="password" id="newPassword" class="adm-input" required minlength="6"
+                                        placeholder="At least 6 characters">
+                                </div>
+
+                                <div class="adm-form-group">
+                                    <label for="confirmPassword" class="adm-label">Confirm New Password</label>
+                                    <input type="password" id="confirmPassword" class="adm-input" required minlength="6"
+                                        placeholder="Re-enter new password">
+                                </div>
+
+                                <button type="submit" class="btn-adm btn-adm-primary">
+                                    Update Password
+                                </button>
+                            </form>
+                        </div>
+
+                        <!-- Data Backup & Reset Card -->
+                        <div class="settings-card">
+                            <h3 class="settings-card-title">💾 Backup & System Sync</h3>
+                            <p class="settings-card-desc">
+                                Export full data snapshot including all tours, enquiries, and subscribers.
+                            </p>
+
+                            <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px;">
+                                <button id="btnBackupAllData" class="btn-adm btn-adm-outline">
+                                    📦 Download Full Backup (JSON)
+                                </button>
+                                <label class="btn-adm btn-adm-outline" style="cursor: pointer; text-align: center;">
+                                    📂 Import Backup JSON
+                                    <input type="file" id="importBackupFile" accept=".json" style="display: none;">
+                                </label>
+                            </div>
+
+                            <hr style="border: 0; border-top: 1px solid var(--adm-border); margin: 20px 0;">
+
+                            <h4 style="font-size: 14px; color: #ff4d79; margin-bottom: 8px;">⚠️ Danger Zone</h4>
+                            <p style="font-size: 12px; color: var(--adm-text-muted); margin-bottom: 12px;">
+                                Reset all tours and demo data to original factory defaults.
+                            </p>
+                            <button id="btnFactoryReset" class="btn-adm btn-adm-danger btn-adm-sm">
+                                ⚠️ Reset All Data to Defaults
+                            </button>
+                        </div>
+                    </div>
+                </section>
+
+            </main>
+        </div>
+
+    </div>
+
+
+    <!-- ======================================================================
+         MODALS (ADD / EDIT TOUR DATE)
+         ====================================================================== -->
+    <div class="adm-modal-backdrop" id="tourModalBackdrop">
+        <div class="adm-modal">
+            <div class="adm-modal-header">
+                <h3 class="adm-modal-title" id="tourModalTitle">Add Tour Date</h3>
+                <button type="button" class="adm-modal-close" id="tourModalClose">✕</button>
+            </div>
+
+            <form id="tourForm">
+                <div class="adm-modal-body">
+                    <input type="hidden" id="tourId">
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                        <div class="adm-form-group">
+                            <label for="tourDate" class="adm-label">Tour Date *</label>
+                            <input type="text" id="tourDate" class="adm-input" required placeholder="e.g. 18.11.2026">
+                        </div>
+
+                        <div class="adm-form-group">
+                            <label for="tourDayTime" class="adm-label">Day & Time *</label>
+                            <input type="text" id="tourDayTime" class="adm-input" required
+                                placeholder="e.g. Saturday · 7:00 PM">
+                        </div>
+                    </div>
+
+                    <div class="adm-form-group">
+                        <label for="tourVenue" class="adm-label">Venue Name *</label>
+                        <input type="text" id="tourVenue" class="adm-input" required
+                            placeholder="e.g. Kolkata, Nazrul Mancha">
+                    </div>
+
+                    <div class="adm-form-group">
+                        <label for="tourCity" class="adm-label">City, State / Country *</label>
+                        <input type="text" id="tourCity" class="adm-input" required
+                            placeholder="e.g. West Bengal, India">
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                        <div class="adm-form-group">
+                            <label for="tourStatus" class="adm-label">Status Badge</label>
+                            <select id="tourStatus" class="adm-input">
+                                <option value="Upcoming Show">Upcoming Show (Hot Glow)</option>
+                                <option value="Confirmed">Confirmed</option>
+                                <option value="Sold Out">Sold Out</option>
+                                <option value="Postponed">Postponed</option>
+                            </select>
+                        </div>
+
+                        <div class="adm-form-group">
+                            <label for="tourActionText" class="adm-label">Button Text</label>
+                            <input type="text" id="tourActionText" class="adm-input" placeholder="e.g. Enquire Event"
+                                value="Enquire Event">
+                        </div>
+                    </div>
+
+                    <div class="adm-form-group">
+                        <label for="tourActionUrl" class="adm-label">Button Link URL</label>
+                        <input type="text" id="tourActionUrl" class="adm-input"
+                            placeholder="e.g. #contact or ticket link" value="#contact">
+                    </div>
+
+                    <div class="adm-form-group">
+                        <label class="auth-checkbox">
+                            <input type="checkbox" id="tourActive" checked>
+                            <span>Active (Visible on public website)</span>
+                        </label>
+                    </div>
+
+                    <!-- Live Preview Box -->
+                    <div class="modal-preview-box">
+                        <div class="modal-preview-title">Live Preview on Public Website</div>
+                        <div class="tour-row"
+                            style="background: rgba(29, 46, 58, 0.4); border: 1px solid var(--border-color); padding: 16px;">
+                            <div class="tour-date-col">
+                                <span class="tour-date" id="previewDate">18.11.2026</span>
+                                <span class="tour-day" id="previewDayTime">Saturday · 7:00 PM</span>
+                            </div>
+                            <div class="tour-venue-col">
+                                <h3 class="tour-venue" id="previewVenue" style="font-size: 17px;">Kolkata, Nazrul Mancha
+                                </h3>
+                                <span class="tour-city" id="previewCity">West Bengal, India</span>
+                            </div>
+                            <div class="tour-status-col">
+                                <span class="badge badge-hot" id="previewBadge">Upcoming Show</span>
+                            </div>
+                            <div class="tour-action-col">
+                                <span class="btn btn-outline-sm" id="previewBtn">Enquire Event</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="adm-modal-footer">
+                    <button type="button" class="btn-adm btn-adm-outline" id="tourModalCancel">Cancel</button>
+                    <button type="submit" class="btn-adm btn-adm-primary" id="tourModalSave">Save Tour Date</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+    <!-- ======================================================================
+         MODALS (UPLOAD / EDIT GALLERY IMAGE - CAPACITY 5 STRICT)
+         ====================================================================== -->
+    <div class="adm-modal-backdrop" id="galleryModalBackdrop">
+        <div class="adm-modal" style="max-width: 640px;">
+            <div class="adm-modal-header">
+                <h3 class="adm-modal-title" id="galleryModalTitle">Upload Stage Photo</h3>
+                <button type="button" class="adm-modal-close" id="galleryModalClose">✕</button>
+            </div>
+
+            <form id="galleryForm">
+                <div class="adm-modal-body">
+                    <input type="hidden" id="galleryImageId">
+
+                    <!-- Capacity Alert Banner inside Modal -->
+                    <div class="modal-capacity-info" id="modalCapacityAlert">
+                        <span class="info-icon">ℹ️</span>
+                        <div>
+                            <strong>Total Gallery Capacity: 5 Photos Max</strong>
+                            <p id="modalCapacityNote"
+                                style="font-size: 12px; margin: 2px 0 0; color: var(--adm-text-muted);">
+                                You can upload up to 5 photos. Uploading optimizes the image for crystal clear display.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- File Dropzone Input -->
+                    <div class="adm-form-group">
+                        <label class="adm-label">Upload Image File (PNG, JPG, WebP) *</label>
+                        <div class="gallery-dropzone" id="galleryDropzone">
+                            <input type="file" id="galleryFileInput" accept="image/png, image/jpeg, image/webp"
+                                class="gallery-hidden-file">
+                            <div class="dropzone-inner" id="dropzoneInner">
+                                <span class="dropzone-icon">📷</span>
+                                <div class="dropzone-text">Click or drag & drop to <strong>Upload Photo</strong></div>
+                                <span class="dropzone-hint">Auto-compressed for instant loading · Max 1200px</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Or Image URL / Path Input -->
+                    <div class="adm-form-group">
+                        <label for="gallerySrcInput" class="adm-label">Or Image URL / Preset Asset</label>
+                        <input type="text" id="gallerySrcInput" class="adm-input"
+                            placeholder="e.g. gallery-live-01.png or https://example.com/photo.jpg">
+                    </div>
+
+                    <!-- Image Preview Area -->
+                    <div class="gallery-preview-wrapper" id="galleryPreviewWrapper" style="display: none;">
+                        <span class="adm-label" style="display: block; margin-bottom: 6px;">Image Preview</span>
+                        <div class="gallery-preview-card">
+                            <img id="galleryPreviewImg" src="" alt="Selected stage photo preview">
+                            <div class="preview-overlay-info">
+                                <span class="preview-badge" id="previewCompressionBadge">✓ Ready for Gallery</span>
+                                <button type="button" id="btnClearImage" class="btn-clear-preview"
+                                    title="Remove image">✕</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                        <div class="adm-form-group">
+                            <label for="galleryTag" class="adm-label">Category Tag *</label>
+                            <input type="text" id="galleryTag" class="adm-input" required
+                                placeholder="e.g. Live Concert, Arena, Vocals" value="Live Concert">
+                        </div>
+
+                        <div class="adm-form-group">
+                            <label for="galleryCaption" class="adm-label">Short Caption Title *</label>
+                            <input type="text" id="galleryCaption" class="adm-input" required
+                                placeholder="e.g. Stage Charisma" value="Stage Performance">
+                        </div>
+                    </div>
+
+                    <div class="adm-form-group">
+                        <label for="galleryFullCaption" class="adm-label">Full Caption (Lightbox View) *</label>
+                        <input type="text" id="galleryFullCaption" class="adm-input" required
+                            placeholder="e.g. Som Chatterjee – Electrifying Stage Presence (Live Concert Tour)">
+                    </div>
+
+                    <div class="adm-form-group">
+                        <label class="auth-checkbox">
+                            <input type="checkbox" id="galleryIsFeatured">
+                            <span>Feature as Large Wide Tile in Mosaic (Col Span 3)</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="adm-modal-footer">
+                    <button type="button" class="btn-adm btn-adm-outline" id="galleryModalCancel">Cancel</button>
+                    <button type="submit" class="btn-adm btn-adm-primary" id="galleryModalSave">Save to Gallery</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+    <!-- ======================================================================
+         CONFIRMATION DIALOG MODAL
+         ====================================================================== -->
+    <div class="adm-modal-backdrop" id="confirmModalBackdrop">
+        <div class="adm-modal" style="max-width: 420px;">
+            <div class="adm-modal-header">
+                <h3 class="adm-modal-title" id="confirmTitle">Confirm Action</h3>
+                <button type="button" class="adm-modal-close" id="confirmClose">✕</button>
+            </div>
+            <div class="adm-modal-body">
+                <p id="confirmMessage" style="font-size: 14px; color: var(--adm-text-muted); line-height: 1.6;">
+                    Are you sure you want to proceed?
+                </p>
+            </div>
+            <div class="adm-modal-footer">
+                <button type="button" class="btn-adm btn-adm-outline" id="confirmCancel">Cancel</button>
+                <button type="button" class="btn-adm btn-adm-danger" id="confirmOk">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ======================================================================
+         TOAST NOTIFICATION CONTAINER
+         ====================================================================== -->
+    <div class="adm-toast-container" id="admToastContainer" aria-live="polite"></div>
+
+</body>
+
+</html>
