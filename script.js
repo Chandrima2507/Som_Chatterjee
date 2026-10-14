@@ -132,7 +132,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     tabindex="0"
                     role="button"
                     aria-label="View photo ${index + 1} of ${galleryItems.length}: ${escapeHTML(item.caption)}">
-                    <img src="${escapeHTML(item.src)}" alt="${escapeHTML(item.caption)}" loading="lazy">
+                    <img src="${escapeHTML(item.src)}" alt="${escapeHTML(item.caption)}" loading="lazy" onerror="this.onerror=null; this.src='gallery-live-01.png';">
                     <div class="slide-overlay">
                         <div class="slide-overlay-top">
                             <span class="slide-tag">${escapeHTML(item.tag || 'Live Concert')}</span>
@@ -177,6 +177,9 @@ document.addEventListener("DOMContentLoaded", () => {
         requestAnimationFrame(() => {
             updateSliderPosition(false);
         });
+        setTimeout(() => {
+            updateSliderPosition(false);
+        }, 150);
     }
 
     function updateSliderPosition(animate = true) {
@@ -415,12 +418,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Window resize handler: recalculate center offset smoothly
     let resizeTimeout = null;
-    window.addEventListener('resize', () => {
+    const handleViewportChange = () => {
         clearTimeout(resizeTimeout);
         resizeTimeout = setTimeout(() => {
             updateSliderPosition(false);
-        }, 120);
-    });
+        }, 100);
+    };
+    window.addEventListener('resize', handleViewportChange);
+    window.addEventListener('orientationchange', handleViewportChange);
+    window.addEventListener('load', handleViewportChange);
 
     // Lightbox Integration with slider photos
     function showLightboxIndex(index) {
