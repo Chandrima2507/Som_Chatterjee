@@ -581,15 +581,10 @@ export function saveGallery(gallery) {
 
 export function addGalleryImage(imageData) {
     const list = getGallery();
-    if (list.length >= MAX_GALLERY_CAPACITY) {
-        return {
-            success: false,
-            error: `Maximum gallery capacity (${MAX_GALLERY_CAPACITY} images) reached. Delete an image first.`
-        };
-    }
+    let replaced = false;
 
     const newItem = {
-        id: 'gal-' + Date.now(),
+        id: imageData.id || ('gal-' + Date.now()),
         src: imageData.src,
         tag: imageData.tag ? imageData.tag.trim() : 'Live Stage',
         caption: imageData.caption ? imageData.caption.trim() : 'Stage Moment',
@@ -597,17 +592,39 @@ export function addGalleryImage(imageData) {
         isFeatured: Boolean(imageData.isFeatured !== undefined ? imageData.isFeatured : (list.length < 2))
     };
 
-    list.push(newItem);
+    if (imageData.replaceId) {
+        const idx = list.findIndex(g => g.id === imageData.replaceId);
+        if (idx !== -1) {
+            list[idx] = newItem;
+            replaced = true;
+        } else {
+            list.push(newItem);
+        }
+    } else if (imageData.replaceSlotIndex !== undefined && imageData.replaceSlotIndex !== null && imageData.replaceSlotIndex >= 0 && imageData.replaceSlotIndex < list.length) {
+        list[imageData.replaceSlotIndex] = newItem;
+        replaced = true;
+    } else if (list.length >= MAX_GALLERY_CAPACITY) {
+        // Automatically replace the 5th photo slot (index 4) if full
+        list[MAX_GALLERY_CAPACITY - 1] = newItem;
+        replaced = true;
+    } else {
+        list.push(newItem);
+    }
+
     saveGallery(list);
 
     // Async persist to backend
     fetch('/api/gallery', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newItem)
+        body: JSON.stringify({
+            ...newItem,
+            replaceId: imageData.replaceId,
+            replaceSlotIndex: imageData.replaceSlotIndex
+        })
     }).catch(err => console.warn('Backend addGalleryImage error:', err));
 
-    return { success: true, item: newItem };
+    return { success: true, item: newItem, replaced, gallery: list };
 }
 
 export function updateGalleryImage(id, data) {
@@ -686,3 +703,24 @@ export function compressImageFile(file, maxWidth = 1200, maxHeight = 850, qualit
         reader.readAsDataURL(file);
     });
 }
+
+// Upload image file/dataUrl to server storage (public/uploads/)
+export async function uploadGalleryFile(dataUrl) {
+    try {
+        const res = await fetch('/api/gallery/upload', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ dataUrl })
+        });
+        if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            throw new Error(errData.error || `Upload failed with status ${res.status}`);
+        }
+        const data = await res.json();
+        return data;
+    } catch (err) {
+        console.warn('Backend file upload fallback to DataURL:', err.message);
+        return { success: false, url: dataUrl, error: err.message };
+    }
+}
+

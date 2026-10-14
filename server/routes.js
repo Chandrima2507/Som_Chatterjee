@@ -1,4 +1,7 @@
 import express from 'express';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import {
     getToursDB,
     saveToursDB,
@@ -20,6 +23,9 @@ import {
     validateAdminDB,
     updateAdminCredsDB
 } from './db.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export const apiRouter = express.Router();
 export const apiApp = express();
@@ -123,6 +129,48 @@ apiRouter.get('/gallery', (req, res) => {
         const gallery = getGalleryDB();
         res.json({ success: true, gallery });
     } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+apiRouter.post('/gallery/upload', (req, res) => {
+    try {
+        const { dataUrl } = req.body;
+        if (!dataUrl || typeof dataUrl !== 'string' || !dataUrl.startsWith('data:image/')) {
+            return res.status(400).json({ success: false, error: 'Valid image dataUrl is required' });
+        }
+
+        const matches = dataUrl.match(/^data:image\/([a-zA-Z0-9+]+);base64,(.+)$/);
+        if (!matches || matches.length !== 3) {
+            return res.status(400).json({ success: false, error: 'Malformed image data' });
+        }
+
+        const ext = matches[1] === 'jpeg' ? 'jpg' : matches[1];
+        const base64Data = matches[2];
+        const buffer = Buffer.from(base64Data, 'base64');
+
+        const cleanName = `som-stage-${Date.now()}.${ext}`;
+        const uploadDir = path.resolve(__dirname, '../public/uploads');
+        if (!fs.existsSync(uploadDir)) {
+            fs.mkdirSync(uploadDir, { recursive: true });
+        }
+        const filePath = path.join(uploadDir, cleanName);
+        fs.writeFileSync(filePath, buffer);
+
+        // Also sync to dist/uploads if dist exists
+        const distUploadDir = path.resolve(__dirname, '../dist/uploads');
+        if (fs.existsSync(distUploadDir)) {
+            fs.writeFileSync(path.join(distUploadDir, cleanName), buffer);
+        }
+
+        // Return relative path so browsers can load it immediately
+        res.json({
+            success: true,
+            url: `uploads/${cleanName}`,
+            filename: cleanName
+        });
+    } catch (err) {
+        console.error('Gallery image upload error:', err);
         res.status(500).json({ success: false, error: err.message });
     }
 });

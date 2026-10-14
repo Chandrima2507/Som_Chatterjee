@@ -242,9 +242,7 @@ export function saveGalleryDB(gallery) {
 export function addGalleryImageDB(item) {
     const db = readDB();
     if (!db.gallery) db.gallery = [];
-    if (db.gallery.length >= 5) {
-        return { success: false, error: 'Maximum gallery capacity (5 images) reached. Delete an image first.' };
-    }
+
     const newItem = {
         id: item.id || ('gal-' + Date.now()),
         src: item.src,
@@ -253,6 +251,32 @@ export function addGalleryImageDB(item) {
         fullCaption: item.fullCaption ? item.fullCaption.trim() : (item.caption || 'Som Chatterjee Live Performance'),
         isFeatured: Boolean(item.isFeatured !== undefined ? item.isFeatured : (db.gallery.length < 2))
     };
+
+    // If explicit replacement ID was passed
+    if (item.replaceId) {
+        const idx = db.gallery.findIndex(g => g.id === item.replaceId);
+        if (idx !== -1) {
+            db.gallery[idx] = newItem;
+            writeDB(db);
+            return { success: true, item: newItem, gallery: db.gallery, replaced: true };
+        }
+    }
+
+    // If target slot index was selected (0 to 4)
+    if (item.replaceSlotIndex !== undefined && item.replaceSlotIndex >= 0 && item.replaceSlotIndex < db.gallery.length) {
+        db.gallery[item.replaceSlotIndex] = newItem;
+        writeDB(db);
+        return { success: true, item: newItem, gallery: db.gallery, replaced: true };
+    }
+
+    // If at maximum capacity of 5, replace slot 5 to ensure upload always succeeds
+    if (db.gallery.length >= 5) {
+        db.gallery[4] = newItem;
+        writeDB(db);
+        return { success: true, item: newItem, gallery: db.gallery, replaced: true };
+    }
+
+    // Otherwise add to next available slot
     db.gallery.push(newItem);
     writeDB(db);
     return { success: true, item: newItem, gallery: db.gallery };

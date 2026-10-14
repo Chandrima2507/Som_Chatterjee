@@ -242,8 +242,7 @@
                         </div>
                         <p class="capacity-helper">
                             Strict capacity limit: The public gallery showcases a curated collection of up to <strong>5
-                                live stage photos</strong>. To upload a new photo when all 5 slots are full, delete an
-                            existing image first to free up a slot.
+                                live stage photos</strong>. You can upload new photos to empty slots, replace any of the 5 photo slots directly, or delete an existing image.
                         </p>
                     </div>
 
@@ -543,6 +542,17 @@
                                 You can upload up to 5 photos. Uploading optimizes the image for crystal clear display.
                             </p>
                         </div>
+                    </div>
+
+                    <!-- Target Gallery Slot Selector -->
+                    <div class="adm-form-group" id="gallerySlotGroup">
+                        <label for="gallerySlotSelect" class="adm-label">Target Photo Slot (5 Slots Total) *</label>
+                        <select id="gallerySlotSelect" class="adm-select" style="width: 100%;">
+                            <!-- Options injected dynamically by admin.js -->
+                        </select>
+                        <span style="font-size: 11px; color: var(--adm-text-muted); display: block; margin-top: 4px;">
+                            Select which slot to fill or replace in the public stage moments slider.
+                        </span>
                     </div>
 
                     <!-- File Dropzone Input -->

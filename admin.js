@@ -29,6 +29,7 @@ import {
     deleteGalleryImage,
     resetGallery,
     compressImageFile,
+    uploadGalleryFile,
     MAX_GALLERY_CAPACITY,
     DEFAULT_GALLERY
 } from './storage.js';
@@ -709,13 +710,9 @@ function initGalleryManager() {
     const previewImg = document.getElementById('galleryPreviewImg');
     const previewBadge = document.getElementById('previewCompressionBadge');
 
-    // Open Upload Modal
+    // Open Upload Modal (Never blocked; allows adding or slot replacement)
     if (btnUpload) {
         btnUpload.addEventListener('click', () => {
-            if (currentGallery.length >= MAX_GALLERY_CAPACITY) {
-                showToast(`Maximum gallery capacity of ${MAX_GALLERY_CAPACITY} images reached! Please delete a photo first to free up a slot.`, 'danger');
-                return;
-            }
             openGalleryModal();
         });
     }
@@ -745,6 +742,13 @@ function initGalleryManager() {
     }
 
     if (dropzone) {
+        dropzone.style.cursor = 'pointer';
+        dropzone.addEventListener('click', (e) => {
+            if (fileInput && e.target !== fileInput) {
+                fileInput.click();
+            }
+        });
+
         ['dragenter', 'dragover'].forEach(eventName => {
             dropzone.addEventListener(eventName, (e) => {
                 e.preventDefault();
@@ -772,19 +776,32 @@ function initGalleryManager() {
 
     async function handleGalleryFile(file) {
         try {
-            if (previewBadge) previewBadge.textContent = '⏳ Compressing image...';
+            if (previewBadge) previewBadge.textContent = '⏳ Compressing photo...';
             if (previewWrapper) previewWrapper.style.display = 'block';
 
             const compressedData = await compressImageFile(file, 1200, 850, 0.82);
-            stagedGalleryImage = compressedData;
-
             if (previewImg) previewImg.src = compressedData;
-            if (previewBadge) {
+            if (previewBadge) previewBadge.textContent = '⏳ Saving photo to server...';
+
+            // Upload directly to permanent server disk storage (public/uploads/)
+            const uploadRes = await uploadGalleryFile(compressedData);
+            if (uploadRes && uploadRes.success && uploadRes.url) {
+                stagedGalleryImage = uploadRes.url;
+                if (previewBadge) {
+                    previewBadge.textContent = `✓ Uploaded to Server (${uploadRes.filename || 'Ready'})`;
+                }
+                showToast('Photo uploaded and optimized successfully!', 'success');
+            } else {
+                // Fallback to data URL
+                stagedGalleryImage = compressedData;
                 const approxSizeKb = Math.round(compressedData.length * 0.75 / 1024);
-                previewBadge.textContent = `✓ Optimized Ready (~${approxSizeKb} KB)`;
+                if (previewBadge) {
+                    previewBadge.textContent = `✓ Optimized Ready (~${approxSizeKb} KB)`;
+                }
+                showToast('Photo processed and ready for upload!', 'info');
             }
+
             if (srcInput) srcInput.value = ''; // Clear manual URL when file uploaded
-            showToast('Photo compressed and ready for upload!', 'info');
         } catch (err) {
             showToast(err.message || 'Error processing image file.', 'danger');
             if (previewWrapper) previewWrapper.style.display = 'none';
@@ -838,18 +855,18 @@ function initGalleryManager() {
             }
 
             if (!imageId) {
-                // Uploading NEW image - enforce strict 5 capacity limit
-                if (currentGallery.length >= MAX_GALLERY_CAPACITY) {
-                    showToast(`Cannot upload: Maximum capacity of ${MAX_GALLERY_CAPACITY} images reached. Delete an existing image first.`, 'danger');
-                    return;
-                }
+                // Uploading NEW image or replacing a slot
+                const slotSelect = document.getElementById('gallerySlotSelect');
+                const rawSlotVal = slotSelect ? slotSelect.value : '';
+                const targetSlot = rawSlotVal !== '' ? parseInt(rawSlotVal, 10) : undefined;
 
                 const result = addGalleryImage({
                     src: finalSrc,
                     tag,
                     caption,
                     fullCaption,
-                    isFeatured
+                    isFeatured,
+                    replaceSlotIndex: targetSlot
                 });
 
                 if (!result.success) {
@@ -857,9 +874,14 @@ function initGalleryManager() {
                     return;
                 }
 
-                showToast(`Stage photo successfully uploaded! (${currentGallery.length + 1} of ${MAX_GALLERY_CAPACITY} slots used)`, 'success');
+                const slotNum = (targetSlot !== undefined && !isNaN(targetSlot)) ? targetSlot + 1 : currentGallery.length;
+                if (result.replaced) {
+                    showToast(`Photo saved to Slot ${slotNum} successfully!`, 'success');
+                } else {
+                    showToast(`Stage photo successfully uploaded! (${currentGallery.length} of ${MAX_GALLERY_CAPACITY} slots used)`, 'success');
+                }
             } else {
-                // Editing existing image
+                // Editing existing image metadata
                 updateGalleryImage(imageId, {
                     src: finalSrc,
                     tag,
@@ -878,7 +900,7 @@ function initGalleryManager() {
     }
 }
 
-function openGalleryModal(itemToEdit = null) {
+function openGalleryModal(itemToEdit = null, isReplaceMode = false) {
     const modalBackdrop = document.getElementById('galleryModalBackdrop');
     const modalTitle = document.getElementById('galleryModalTitle');
     const modalSaveBtn = document.getElementById('galleryModalSave');
@@ -893,6 +915,9 @@ function openGalleryModal(itemToEdit = null) {
     const fullCaptionInput = document.getElementById('galleryFullCaption');
     const isFeaturedCheckbox = document.getElementById('galleryIsFeatured');
 
+    const slotGroup = document.getElementById('gallerySlotGroup');
+    const slotSelect = document.getElementById('gallerySlotSelect');
+
     const previewWrapper = document.getElementById('galleryPreviewWrapper');
     const previewImg = document.getElementById('galleryPreviewImg');
     const previewBadge = document.getElementById('previewCompressionBadge');
@@ -900,10 +925,25 @@ function openGalleryModal(itemToEdit = null) {
     stagedGalleryImage = null;
     if (fileInput) fileInput.value = '';
 
-    const remainingSlots = Math.max(0, MAX_GALLERY_CAPACITY - currentGallery.length);
+    // Populate Target Slot Dropdown (5 total slots)
+    if (slotSelect) {
+        slotSelect.innerHTML = '';
+        for (let i = 0; i < MAX_GALLERY_CAPACITY; i++) {
+            const existing = currentGallery[i];
+            const opt = document.createElement('option');
+            opt.value = i;
+            if (existing) {
+                opt.textContent = `Slot ${i + 1}: "${existing.caption || existing.tag}" (Replace Photo)`;
+            } else {
+                opt.textContent = `Slot ${i + 1}: [Empty Slot · Add New Photo]`;
+            }
+            slotSelect.appendChild(opt);
+        }
+    }
 
-    if (itemToEdit) {
-        if (modalTitle) modalTitle.textContent = 'Edit Stage Photo';
+    if (itemToEdit && !isReplaceMode) {
+        // Pure text/metadata edit
+        if (modalTitle) modalTitle.textContent = 'Edit Stage Photo Details';
         if (modalSaveBtn) modalSaveBtn.textContent = 'Save Changes';
         if (imageIdInput) imageIdInput.value = itemToEdit.id;
         if (srcInput) srcInput.value = itemToEdit.src;
@@ -912,15 +952,57 @@ function openGalleryModal(itemToEdit = null) {
         if (fullCaptionInput) fullCaptionInput.value = itemToEdit.fullCaption || itemToEdit.caption || '';
         if (isFeaturedCheckbox) isFeaturedCheckbox.checked = Boolean(itemToEdit.isFeatured);
 
+        if (slotGroup) slotGroup.style.display = 'none';
+
         if (previewImg) previewImg.src = itemToEdit.src;
         if (previewWrapper) previewWrapper.style.display = 'block';
         if (previewBadge) previewBadge.textContent = 'Current Image';
 
         if (modalCapacityAlert) modalCapacityAlert.classList.remove('alert-full');
         if (modalCapacityNote) modalCapacityNote.textContent = 'Editing existing photo details without using additional capacity.';
+    } else if (itemToEdit && isReplaceMode) {
+        // Direct Replace mode on a specific card
+        const targetIndex = currentGallery.findIndex(g => g.id === itemToEdit.id);
+        const slotNumber = targetIndex !== -1 ? targetIndex + 1 : 1;
+
+        if (modalTitle) modalTitle.textContent = `Replace Photo in Slot ${slotNumber}`;
+        if (modalSaveBtn) modalSaveBtn.textContent = `Replace Photo (Slot ${slotNumber})`;
+        if (imageIdInput) imageIdInput.value = ''; // treated as new upload that replaces target slot
+        if (srcInput) srcInput.value = '';
+        if (tagInput) tagInput.value = itemToEdit.tag || 'Live Concert';
+        if (captionInput) captionInput.value = itemToEdit.caption || 'Stage Performance';
+        if (fullCaptionInput) fullCaptionInput.value = itemToEdit.fullCaption || itemToEdit.caption || '';
+        if (isFeaturedCheckbox) isFeaturedCheckbox.checked = Boolean(itemToEdit.isFeatured);
+
+        if (slotGroup) slotGroup.style.display = 'block';
+        if (slotSelect && targetIndex !== -1) {
+            slotSelect.value = targetIndex;
+        }
+
+        if (previewWrapper) previewWrapper.style.display = 'none';
+        if (previewImg) previewImg.src = '';
+
+        if (modalCapacityAlert) modalCapacityAlert.classList.remove('alert-full');
+        if (modalCapacityNote) modalCapacityNote.textContent = `Replacing photo in Slot ${slotNumber} ("${itemToEdit.caption}"). Select a new photo file below.`;
     } else {
-        if (modalTitle) modalTitle.textContent = 'Upload Stage Photo';
-        if (modalSaveBtn) modalSaveBtn.textContent = `Upload to Gallery (Slot ${currentGallery.length + 1} of ${MAX_GALLERY_CAPACITY})`;
+        // General Upload Modal
+        if (slotGroup) slotGroup.style.display = 'block';
+
+        if (currentGallery.length < MAX_GALLERY_CAPACITY) {
+            const nextSlot = currentGallery.length;
+            if (slotSelect) slotSelect.value = nextSlot;
+            if (modalTitle) modalTitle.textContent = `Upload Stage Photo (Slot ${nextSlot + 1} of ${MAX_GALLERY_CAPACITY})`;
+            if (modalSaveBtn) modalSaveBtn.textContent = `Upload to Slot ${nextSlot + 1}`;
+            if (modalCapacityAlert) modalCapacityAlert.classList.remove('alert-full');
+            if (modalCapacityNote) modalCapacityNote.textContent = `${currentGallery.length} of ${MAX_GALLERY_CAPACITY} slots used. Uploading will fill Slot ${nextSlot + 1}.`;
+        } else {
+            if (slotSelect) slotSelect.value = MAX_GALLERY_CAPACITY - 1; // Default to Slot 5
+            if (modalTitle) modalTitle.textContent = 'Upload & Replace Stage Photo';
+            if (modalSaveBtn) modalSaveBtn.textContent = 'Upload & Replace Selected Slot';
+            if (modalCapacityAlert) modalCapacityAlert.classList.remove('alert-full');
+            if (modalCapacityNote) modalCapacityNote.textContent = `All ${MAX_GALLERY_CAPACITY} slots are in use. Select which photo slot you want to replace below.`;
+        }
+
         if (imageIdInput) imageIdInput.value = '';
         if (srcInput) srcInput.value = '';
         if (tagInput) tagInput.value = 'Live Concert';
@@ -930,16 +1012,6 @@ function openGalleryModal(itemToEdit = null) {
 
         if (previewWrapper) previewWrapper.style.display = 'none';
         if (previewImg) previewImg.src = '';
-
-        if (modalCapacityAlert && modalCapacityNote) {
-            if (currentGallery.length >= MAX_GALLERY_CAPACITY) {
-                modalCapacityAlert.classList.add('alert-full');
-                modalCapacityNote.textContent = `⚠️ Capacity full (5/5). You must delete an image before you can upload a new one.`;
-            } else {
-                modalCapacityAlert.classList.remove('alert-full');
-                modalCapacityNote.textContent = `${currentGallery.length} of ${MAX_GALLERY_CAPACITY} slots used. ${remainingSlots} slot${remainingSlots > 1 ? 's' : ''} available. Uploaded files will be auto-optimized.`;
-            }
-        }
     }
 
     if (modalBackdrop) modalBackdrop.classList.add('active');
@@ -1001,9 +1073,12 @@ function renderGalleryAdmin() {
                             <button type="button" class="btn-reorder btn-move-gal-up" data-id="${item.id}" ${isFirst ? 'disabled' : ''} title="Move Earlier in Mosaic">▲</button>
                             <button type="button" class="btn-reorder btn-move-gal-down" data-id="${item.id}" ${isLast ? 'disabled' : ''} title="Move Later in Mosaic">▼</button>
                         </div>
-                        <div style="display: flex; gap: 8px;">
-                            <button type="button" class="btn-adm btn-adm-outline btn-adm-sm btn-edit-gal" data-id="${item.id}" title="Edit Caption & Settings">
+                        <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                            <button type="button" class="btn-adm btn-adm-outline btn-adm-sm btn-edit-gal" data-id="${item.id}" title="Edit Caption & Details">
                                 ✏️ Edit
+                            </button>
+                            <button type="button" class="btn-adm btn-adm-cyan btn-adm-sm btn-replace-gal" data-id="${item.id}" title="Replace This Photo">
+                                📷 Replace
                             </button>
                             <button type="button" class="btn-adm btn-adm-danger btn-adm-sm btn-delete-gal" data-id="${item.id}" title="Delete Image & Free Slot">
                                 🗑️ Delete
@@ -1025,7 +1100,16 @@ function attachGalleryCardEvents(container) {
         btn.addEventListener('click', () => {
             const id = btn.getAttribute('data-id');
             const target = currentGallery.find(g => g.id === id);
-            if (target) openGalleryModal(target);
+            if (target) openGalleryModal(target, false);
+        });
+    });
+
+    // Replace Photo buttons
+    container.querySelectorAll('.btn-replace-gal').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const id = btn.getAttribute('data-id');
+            const target = currentGallery.find(g => g.id === id);
+            if (target) openGalleryModal(target, true);
         });
     });
 
