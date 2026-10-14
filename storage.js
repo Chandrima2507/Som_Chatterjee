@@ -552,7 +552,7 @@ export function getGallery() {
         const stored = localStorage.getItem(STORAGE_KEYS.GALLERY);
         if (stored) {
             const parsed = JSON.parse(stored);
-            if (Array.isArray(parsed)) {
+            if (Array.isArray(parsed) && parsed.length > 0) {
                 return parsed;
             }
         }

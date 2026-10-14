@@ -564,7 +564,14 @@
                             <div class="dropzone-inner" id="dropzoneInner">
                                 <span class="dropzone-icon">📷</span>
                                 <div class="dropzone-text">Click or drag & drop to <strong>Upload Photo</strong></div>
-                                <span class="dropzone-hint">Auto-compressed for instant loading · Max 1200px</span>
+                                <div style="margin-top: 10px;">
+                                    <button type="button" class="btn-adm btn-adm-cyan btn-adm-sm" id="btnBrowseGalleryFile" style="pointer-events: auto;">
+                                        📁 Choose Photo from Device
+                                    </button>
+                                </div>
+                                <span class="dropzone-hint" id="dropzoneHintText" style="display: block; margin-top: 8px;">
+                                    Auto-compressed for instant loading · Max 1200px
+                                </span>
                             </div>
                         </div>
                     </div>

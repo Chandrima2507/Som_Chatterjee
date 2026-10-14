@@ -734,6 +734,14 @@ function initGalleryManager() {
     }
 
     // Dropzone & File Input Handling
+    const btnBrowse = document.getElementById('btnBrowseGalleryFile');
+    if (btnBrowse && fileInput) {
+        btnBrowse.addEventListener('click', (e) => {
+            e.stopPropagation();
+            fileInput.click();
+        });
+    }
+
     if (fileInput) {
         fileInput.addEventListener('change', (e) => {
             const file = e.target.files && e.target.files[0];
@@ -744,7 +752,7 @@ function initGalleryManager() {
     if (dropzone) {
         dropzone.style.cursor = 'pointer';
         dropzone.addEventListener('click', (e) => {
-            if (fileInput && e.target !== fileInput) {
+            if (fileInput && e.target !== fileInput && e.target !== btnBrowse) {
                 fileInput.click();
             }
         });
@@ -776,21 +784,37 @@ function initGalleryManager() {
 
     async function handleGalleryFile(file) {
         try {
+            const hintText = document.getElementById('dropzoneHintText');
+            if (hintText) {
+                hintText.textContent = `✓ Selected: ${file.name} (${Math.round(file.size / 1024)} KB)`;
+                hintText.style.color = 'var(--adm-cyan)';
+            }
+
             if (previewBadge) previewBadge.textContent = '⏳ Compressing photo...';
             if (previewWrapper) previewWrapper.style.display = 'block';
 
             const compressedData = await compressImageFile(file, 1200, 850, 0.82);
+            stagedGalleryImage = compressedData;
             if (previewImg) previewImg.src = compressedData;
-            if (previewBadge) previewBadge.textContent = '⏳ Saving photo to server...';
+
+            // Scroll modal body smoothly so preview and submit button are in full view
+            const modalBody = document.querySelector('.adm-modal-body');
+            if (modalBody) {
+                setTimeout(() => {
+                    modalBody.scrollTo({ top: modalBody.scrollHeight, behavior: 'smooth' });
+                }, 80);
+            }
+
+            if (previewBadge) previewBadge.textContent = '⏳ Optimizing on server...';
 
             // Upload directly to permanent server disk storage (public/uploads/)
             const uploadRes = await uploadGalleryFile(compressedData);
             if (uploadRes && uploadRes.success && uploadRes.url) {
                 stagedGalleryImage = uploadRes.url;
                 if (previewBadge) {
-                    previewBadge.textContent = `✓ Uploaded to Server (${uploadRes.filename || 'Ready'})`;
+                    previewBadge.textContent = `✓ Ready for Gallery (${uploadRes.filename || 'Optimized'})`;
                 }
-                showToast('Photo uploaded and optimized successfully!', 'success');
+                showToast('Photo ready! Click "Save to Gallery" below.', 'success');
             } else {
                 // Fallback to data URL
                 stagedGalleryImage = compressedData;
@@ -798,7 +822,7 @@ function initGalleryManager() {
                 if (previewBadge) {
                     previewBadge.textContent = `✓ Optimized Ready (~${approxSizeKb} KB)`;
                 }
-                showToast('Photo processed and ready for upload!', 'info');
+                showToast('Photo ready! Click "Save to Gallery" below.', 'info');
             }
 
             if (srcInput) srcInput.value = ''; // Clear manual URL when file uploaded
@@ -1023,6 +1047,11 @@ function closeGalleryModal() {
     stagedGalleryImage = null;
     const form = document.getElementById('galleryForm');
     if (form) form.reset();
+    const hintText = document.getElementById('dropzoneHintText');
+    if (hintText) {
+        hintText.textContent = 'Auto-compressed for instant loading · Max 1200px';
+        hintText.style.color = '';
+    }
 }
 
 function renderGalleryAdmin() {
