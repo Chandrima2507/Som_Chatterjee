@@ -180,6 +180,58 @@ export const DEFAULT_ADMIN = {
 };
 
 // --------------------------------------------------------------------------
+// Backend API Sync Engine (Bi-directional Server Synchronization)
+// --------------------------------------------------------------------------
+export async function syncWithBackend() {
+    try {
+        const res = await fetch('/api/sync');
+        if (!res.ok) return null;
+        const data = await res.json();
+        if (data && data.success) {
+            if (Array.isArray(data.tours)) {
+                localStorage.setItem(STORAGE_KEYS.TOURS, JSON.stringify(data.tours));
+                window.dispatchEvent(new CustomEvent('som_tours_updated', { detail: data.tours }));
+            }
+            if (Array.isArray(data.gallery)) {
+                localStorage.setItem(STORAGE_KEYS.GALLERY, JSON.stringify(data.gallery));
+                window.dispatchEvent(new CustomEvent('som_gallery_updated', { detail: data.gallery }));
+            }
+            if (Array.isArray(data.enquiries)) {
+                localStorage.setItem(STORAGE_KEYS.ENQUIRIES, JSON.stringify(data.enquiries));
+                window.dispatchEvent(new CustomEvent('som_enquiries_updated', { detail: data.enquiries }));
+            }
+            if (Array.isArray(data.subscribers)) {
+                localStorage.setItem(STORAGE_KEYS.SUBSCRIBERS, JSON.stringify(data.subscribers));
+                window.dispatchEvent(new CustomEvent('som_subscribers_updated', { detail: data.subscribers }));
+            }
+            if (data.adminUsername) {
+                const creds = getAdminCredentials();
+                creds.username = data.adminUsername;
+                localStorage.setItem(STORAGE_KEYS.ADMIN_CREDS, JSON.stringify(creds));
+            }
+            return data;
+        }
+    } catch (err) {
+        // Quiet fallback when offline or in standalone file preview
+        console.warn('Backend sync note:', err.message);
+    }
+    return null;
+}
+
+// Auto-sync on visibility change and recurring interval
+if (typeof document !== 'undefined') {
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+            syncWithBackend();
+        }
+    });
+}
+if (typeof window !== 'undefined') {
+    setTimeout(syncWithBackend, 60);
+    setInterval(syncWithBackend, 20000);
+}
+
+// --------------------------------------------------------------------------
 // Tour Dates Methods
 // --------------------------------------------------------------------------
 export function getTours() {
@@ -194,7 +246,6 @@ export function getTours() {
     } catch (e) {
         console.error('Error reading tours from localStorage', e);
     }
-    // Initialize with defaults if not present
     saveTours(DEFAULT_TOURS);
     return DEFAULT_TOURS;
 }
@@ -203,13 +254,21 @@ export function saveTours(tours) {
     try {
         localStorage.setItem(STORAGE_KEYS.TOURS, JSON.stringify(tours));
         window.dispatchEvent(new CustomEvent('som_tours_updated', { detail: tours }));
+
+        // Async persist to backend
+        fetch('/api/tours', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tours })
+        }).catch(err => console.warn('Backend saveTours error:', err));
     } catch (e) {
-        console.error('Error saving tours to localStorage', e);
+        console.error('Error saving tours', e);
     }
 }
 
 export function resetTours() {
     saveTours(DEFAULT_TOURS);
+    fetch('/api/tours/reset', { method: 'POST' }).catch(err => console.warn('Backend resetTours error:', err));
     return DEFAULT_TOURS;
 }
 
@@ -228,7 +287,6 @@ export function getEnquiries() {
     } catch (e) {
         console.error('Error reading enquiries from localStorage', e);
     }
-    // Initialize with defaults
     saveEnquiries(DEFAULT_ENQUIRIES);
     return DEFAULT_ENQUIRIES;
 }
@@ -255,8 +313,16 @@ export function addEnquiry(data) {
         status: 'new',
         createdAt: new Date().toISOString()
     };
-    list.unshift(newEnquiry); // Prepend so latest appears first
+    list.unshift(newEnquiry);
     saveEnquiries(list);
+
+    // Async persist to backend
+    fetch('/api/enquiries', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newEnquiry)
+    }).catch(err => console.warn('Backend addEnquiry error:', err));
+
     return newEnquiry;
 }
 
@@ -266,6 +332,14 @@ export function updateEnquiryStatus(id, newStatus) {
     if (target) {
         target.status = newStatus;
         saveEnquiries(list);
+
+        // Async persist to backend
+        fetch(`/api/enquiries/${id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: newStatus })
+        }).catch(err => console.warn('Backend updateEnquiry error:', err));
+
         return true;
     }
     return false;
@@ -274,6 +348,12 @@ export function updateEnquiryStatus(id, newStatus) {
 export function deleteEnquiry(id) {
     const list = getEnquiries().filter(item => item.id !== id);
     saveEnquiries(list);
+
+    // Async persist to backend
+    fetch(`/api/enquiries/${id}`, {
+        method: 'DELETE'
+    }).catch(err => console.warn('Backend deleteEnquiry error:', err));
+
     return list;
 }
 
@@ -309,7 +389,6 @@ export function addSubscriber(email) {
     if (!email) return false;
     const cleanEmail = email.trim().toLowerCase();
     const list = getSubscribers();
-    // Prevent duplicate emails
     if (list.some(s => s.email.toLowerCase() === cleanEmail)) {
         return false;
     }
@@ -320,12 +399,26 @@ export function addSubscriber(email) {
     };
     list.unshift(newSub);
     saveSubscribers(list);
+
+    // Async persist to backend
+    fetch('/api/subscribers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: cleanEmail })
+    }).catch(err => console.warn('Backend addSubscriber error:', err));
+
     return newSub;
 }
 
 export function deleteSubscriber(id) {
     const list = getSubscribers().filter(item => item.id !== id);
     saveSubscribers(list);
+
+    // Async persist to backend
+    fetch(`/api/subscribers/${id}`, {
+        method: 'DELETE'
+    }).catch(err => console.warn('Backend deleteSubscriber error:', err));
+
     return list;
 }
 
@@ -352,10 +445,18 @@ export function getAdminCredentials() {
 export function updateAdminCredentials(newUsername, newPassword) {
     try {
         const creds = {
-            username: (newUsername || 'admin').trim(),
+            username: (newUsername || 'Som@chatterjee').trim(),
             password: newPassword.trim()
         };
         localStorage.setItem(STORAGE_KEYS.ADMIN_CREDS, JSON.stringify(creds));
+
+        // Async persist to backend
+        fetch('/api/auth/credentials', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(creds)
+        }).catch(err => console.warn('Backend updateAdminCredentials error:', err));
+
         return true;
     } catch (e) {
         console.error('Error updating admin creds', e);
@@ -363,8 +464,28 @@ export function updateAdminCredentials(newUsername, newPassword) {
     }
 }
 
+export async function loginAdminBackend(username, password) {
+    try {
+        const res = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password })
+        });
+        const data = await res.json();
+        if (data && data.success) {
+            const creds = getAdminCredentials();
+            creds.username = username;
+            creds.password = password;
+            localStorage.setItem(STORAGE_KEYS.ADMIN_CREDS, JSON.stringify(creds));
+            return data;
+        }
+        return { success: false, message: (data && data.message) || 'Invalid username or password' };
+    } catch (err) {
+        return { success: false, error: err.message };
+    }
+}
+
 export function checkAdminSession() {
-    // Check sessionStorage first, then localStorage (for "Remember me")
     const sessionActive = sessionStorage.getItem(STORAGE_KEYS.ADMIN_SESSION);
     const localActive = localStorage.getItem(STORAGE_KEYS.ADMIN_SESSION);
     return sessionActive === 'true' || localActive === 'true';
@@ -446,6 +567,13 @@ export function saveGallery(gallery) {
     try {
         localStorage.setItem(STORAGE_KEYS.GALLERY, JSON.stringify(gallery));
         window.dispatchEvent(new CustomEvent('som_gallery_updated', { detail: gallery }));
+
+        // Async persist to backend
+        fetch('/api/gallery', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ gallery })
+        }).catch(err => console.warn('Backend saveGallery error:', err));
     } catch (e) {
         console.error('Error saving gallery to localStorage', e);
     }
@@ -471,6 +599,14 @@ export function addGalleryImage(imageData) {
 
     list.push(newItem);
     saveGallery(list);
+
+    // Async persist to backend
+    fetch('/api/gallery', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newItem)
+    }).catch(err => console.warn('Backend addGalleryImage error:', err));
+
     return { success: true, item: newItem };
 }
 
@@ -484,6 +620,14 @@ export function updateGalleryImage(id, data) {
         if (data.fullCaption !== undefined) target.fullCaption = data.fullCaption.trim();
         if (data.isFeatured !== undefined) target.isFeatured = Boolean(data.isFeatured);
         saveGallery(list);
+
+        // Async persist to backend
+        fetch(`/api/gallery/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        }).catch(err => console.warn('Backend updateGalleryImage error:', err));
+
         return true;
     }
     return false;
@@ -492,15 +636,22 @@ export function updateGalleryImage(id, data) {
 export function deleteGalleryImage(id) {
     const list = getGallery().filter(item => item.id !== id);
     saveGallery(list);
+
+    // Async persist to backend
+    fetch(`/api/gallery/${id}`, {
+        method: 'DELETE'
+    }).catch(err => console.warn('Backend deleteGalleryImage error:', err));
+
     return list;
 }
 
 export function resetGallery() {
     saveGallery(DEFAULT_GALLERY);
+    fetch('/api/gallery/reset', { method: 'POST' }).catch(err => console.warn('Backend resetGallery error:', err));
     return DEFAULT_GALLERY;
 }
 
-// Client-side image compressor utility (scales large uploads to fit cleanly in storage)
+// Client-side image compressor utility
 export function compressImageFile(file, maxWidth = 1200, maxHeight = 850, quality = 0.82) {
     return new Promise((resolve, reject) => {
         if (!file || !file.type.startsWith('image/')) {

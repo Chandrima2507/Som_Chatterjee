@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import { resolve } from 'path';
+import { apiApp } from './server/routes.js';
 
 export default defineConfig({
   server: {
@@ -7,6 +8,14 @@ export default defineConfig({
       ignored: ['**/*.gif', '**/*.mp3', '**/*.mpeg', '**/*.png', '**/*.jpg', '**/*.jpeg']
     }
   },
+  plugins: [
+    {
+      name: 'som-backend-api',
+      configureServer(server) {
+        server.middlewares.use('/api', apiApp);
+      }
+    }
+  ],
   build: {
     rollupOptions: {
       input: {

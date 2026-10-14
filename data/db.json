@@ -1,0 +1,157 @@
+{
+  "tours": [
+    {
+      "id": "tour-1",
+      "date": "18.11.2026",
+      "dayTime": "Saturday · 7:00 PM",
+      "venue": "Kolkata, Nazrul Mancha",
+      "city": "West Bengal, India",
+      "status": "Upcoming Show",
+      "badgeType": "badge-hot",
+      "actionUrl": "#contact",
+      "actionText": "Enquire Event",
+      "active": true
+    },
+    {
+      "id": "tour-2",
+      "date": "05.12.2026",
+      "dayTime": "Friday · 7:30 PM",
+      "venue": "Mumbai, Shanmukhananda Hall",
+      "city": "Maharashtra, India",
+      "status": "Confirmed",
+      "badgeType": "badge",
+      "actionUrl": "#contact",
+      "actionText": "Enquire Event",
+      "active": true
+    },
+    {
+      "id": "tour-3",
+      "date": "24.12.2026",
+      "dayTime": "Thursday · 8:00 PM",
+      "venue": "Delhi, Siri Fort Auditorium",
+      "city": "New Delhi, India",
+      "status": "Confirmed",
+      "badgeType": "badge",
+      "actionUrl": "#contact",
+      "actionText": "Enquire Event",
+      "active": true
+    },
+    {
+      "id": "tour-4",
+      "date": "15.01.2027",
+      "dayTime": "Thursday · 6:30 PM",
+      "venue": "Bengaluru, Chowdiah Memorial",
+      "city": "Karnataka, India",
+      "status": "Confirmed",
+      "badgeType": "badge",
+      "actionUrl": "#contact",
+      "actionText": "Enquire Event",
+      "active": true
+    },
+    {
+      "id": "tour-5",
+      "date": "08.02.2027",
+      "dayTime": "Sunday · 7:00 PM",
+      "venue": "Hyderabad, Shilpakala Vedika",
+      "city": "Telangana, India",
+      "status": "Upcoming Show",
+      "badgeType": "badge-hot",
+      "actionUrl": "#contact",
+      "actionText": "Enquire Event",
+      "active": true
+    }
+  ],
+  "enquiries": [
+    {
+      "id": "ENQ-1739000001",
+      "name": "Anirban Mukherjee",
+      "email": "anirban.fest@presi.edu.in",
+      "phone": "+91 98301 23456",
+      "eventType": "College Fest",
+      "date": "2026-12-19",
+      "message": "Looking to headline Som Chatterjee for Milieu 2026, Presidency University Kolkata. Anticipated audience 3,500+ students. Needs a 90-min electrifying Bollywood & Bengali rock set.",
+      "status": "new",
+      "createdAt": "2026-10-14T09:30:00.000Z"
+    },
+    {
+      "id": "ENQ-1738900002",
+      "name": "Priya Sharma",
+      "email": "priya.sharma@tataevents.com",
+      "phone": "+91 98202 87654",
+      "eventType": "Corporate Event",
+      "date": "2026-11-28",
+      "message": "Annual Corporate Gala Dinner at Grand Hyatt Mumbai. Looking for a soulful Sufi, unplugged Bollywood, and acoustic set for 450 guests.",
+      "status": "contacted",
+      "createdAt": "2026-10-13T16:15:00.000Z"
+    },
+    {
+      "id": "ENQ-1738800003",
+      "name": "Debashis Banerjee",
+      "email": "debashis.carnival@gmail.com",
+      "phone": "+91 94340 11223",
+      "eventType": "Concert",
+      "date": "2027-01-23",
+      "message": "Siliguri Winter Music Carnival 2027 Headline act request. Open-air arena, full technical sound rider and hospitality provided.",
+      "status": "new",
+      "createdAt": "2026-10-12T11:45:00.000Z"
+    }
+  ],
+  "subscribers": [
+    {
+      "id": "SUB-1",
+      "email": "sourav.sen.kol@gmail.com",
+      "subscribedAt": "2026-10-13T14:20:00.000Z"
+    },
+    {
+      "id": "SUB-2",
+      "email": "ritika.music@outlook.com",
+      "subscribedAt": "2026-10-14T08:10:00.000Z"
+    }
+  ],
+  "gallery": [
+    {
+      "id": "gal-1",
+      "src": "gallery-live-01.png",
+      "tag": "Live Concert",
+      "caption": "Stage Charisma",
+      "fullCaption": "Som Chatterjee – Electrifying Stage Presence (Live Concert Tour)",
+      "isFeatured": true
+    },
+    {
+      "id": "gal-2",
+      "src": "gallery-live-02.png",
+      "tag": "Live Vocals",
+      "caption": "Vocal Intensity",
+      "fullCaption": "Som Chatterjee – Vocal Intensity & Fan Connection",
+      "isFeatured": true
+    },
+    {
+      "id": "gal-3",
+      "src": "gallery-live-03.png",
+      "tag": "Arena Spectacle",
+      "caption": "Sea of Lights",
+      "fullCaption": "Som Chatterjee – Arena Grandeur & Sea of Lights",
+      "isFeatured": false
+    },
+    {
+      "id": "gal-4",
+      "src": "gallery-live-04.png",
+      "tag": "Performance",
+      "caption": "Soulful Expression",
+      "fullCaption": "Som Chatterjee – Soulful Live Performance & Musical Passion",
+      "isFeatured": false
+    },
+    {
+      "id": "gal-5",
+      "src": "gallery-live-05.png",
+      "tag": "Monochrome",
+      "caption": "Stage Spotlight",
+      "fullCaption": "Som Chatterjee – Monochrome Spotlight & Stage Aura",
+      "isFeatured": false
+    }
+  ],
+  "admin": {
+    "username": "Som@chatterjee",
+    "password": "Dino@2020"
+  }
+}

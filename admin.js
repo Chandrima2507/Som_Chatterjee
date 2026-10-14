@@ -16,8 +16,10 @@ import {
     deleteSubscriber,
     getAdminCredentials,
     updateAdminCredentials,
+    loginAdminBackend,
     checkAdminSession,
     setAdminSession,
+    syncWithBackend,
     escapeHTML,
     formatTimeAgo,
     getGallery,
@@ -81,20 +83,38 @@ function initAuthGate() {
 
     // Login Form Submit
     if (loginForm) {
-        loginForm.addEventListener('submit', (e) => {
+        loginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const enteredUser = (usernameInput.value || '').trim();
             const enteredPass = (passwordInput.value || '').trim();
-            const creds = getAdminCredentials();
 
-            if (
-                enteredUser.toLowerCase() === creds.username.toLowerCase() &&
-                enteredPass === creds.password
-            ) {
+            let authSuccess = false;
+
+            try {
+                const apiRes = await loginAdminBackend(enteredUser, enteredPass);
+                if (apiRes && apiRes.success) {
+                    authSuccess = true;
+                }
+            } catch (err) {
+                // Fallback to local check
+            }
+
+            if (!authSuccess) {
+                const creds = getAdminCredentials();
+                if (
+                    enteredUser.toLowerCase() === creds.username.toLowerCase() &&
+                    enteredPass === creds.password
+                ) {
+                    authSuccess = true;
+                }
+            }
+
+            if (authSuccess) {
                 // Successful Auth
                 if (authErrorMsg) authErrorMsg.style.display = 'none';
                 setAdminSession(true, rememberMe ? rememberMe.checked : false);
                 unlockDashboard();
+                syncWithBackend();
                 showToast('Welcome back, Som Management!', 'success');
             } else {
                 // Failed Auth
